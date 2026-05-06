@@ -127,7 +127,6 @@ fetch(ASSET_PREFIX + 'config.json')
             var url = ASSET_PREFIX + a.file.url;
             var asset = new pc.Asset(a.name, 'texture', { url: url });
             asset.id = parseInt(id);
-            app.assets.add(asset);
             (function(texAsset, texId) {
                 var p = new Promise(function(resolve) {
                     texAsset.on('load', function() {
@@ -138,8 +137,13 @@ fetch(ASSET_PREFIX + 'config.json')
                         console.warn('Texture load error:', texId, err);
                         resolve();
                     });
+                    app.assets.add(texAsset);
+                    app.assets.load(texAsset);
+                    if (texAsset.resource) {
+                        texMap[texId] = texAsset.resource;
+                        resolve();
+                    }
                 });
-                app.assets.load(texAsset);
                 textureLoadPromises.push(p);
             })(asset, id);
         }
