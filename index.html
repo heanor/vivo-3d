@@ -220,13 +220,15 @@ function loadModels() {
             modelEntityMap[modelId] = entity;
 
             var mapping = MODEL_MAPPINGS[modelId];
-            if (mapping && entity.render) {
-                var meshInstances = entity.render.meshInstances;
+            var meshInstances = entity.render ? entity.render.meshInstances : null;
+            console.log('Model', a.name, 'meshes:', meshInstances ? meshInstances.length : 'NO RENDER');
+            if (mapping && meshInstances) {
                 mapping.forEach(function(pair) {
-                    var meshIdx = pair[0];
-                    var matId = pair[1];
+                    var meshIdx = pair[0], matId = pair[1];
                     if (meshIdx < meshInstances.length && matMap[matId]) {
                         meshInstances[meshIdx].material = matMap[matId];
+                    } else {
+                        console.warn('  SKIP mesh', meshIdx, 'mat', matId, 'exists:', !!matMap[matId]);
                     }
                 });
                 meshInstances.forEach(function(mi) { allMeshInstances.push(mi); });
@@ -274,7 +276,11 @@ function onAllModelsLoaded() {
         }
 
         document.getElementById('loading').classList.add('hide');
-        console.log('All models loaded!');
+        console.log('All models loaded! Materials in matMap:', Object.keys(matMap).length);
+        console.log('Mesh instances total:', allMeshInstances.length);
+        allMeshInstances.forEach(function(mi, i) {
+            console.log('  mi[' + i + '] material:', mi.material ? mi.material.name : 'NONE');
+        });
     });
 }
 
