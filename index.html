@@ -148,7 +148,12 @@ fetch(ASSET_PREFIX + 'config.json')
 
     Promise.all(textureLoadPromises).then(function() {
         console.log('All textures loaded:', Object.keys(texMap).length);
-        createMaterials();
+        try {
+            createMaterials();
+            console.log('createMaterials OK, matMap keys:', Object.keys(matMap).length);
+        } catch(e) {
+            console.error('createMaterials FAILED:', e);
+        }
         loadModels();
     });
 });
@@ -168,35 +173,39 @@ function createMaterials() {
         var a = configAssets[id];
         if (a.type !== 'material' || !a.data) continue;
 
-        var d = a.data;
-        var mat = new pc.StandardMaterial();
-        mat.name = a.name;
+        try {
+            var d = a.data;
+            var mat = new pc.StandardMaterial();
+            mat.name = a.name;
 
-        scalarProps.forEach(function(p) { if (d[p] !== undefined) mat[p] = d[p]; });
+            scalarProps.forEach(function(p) { if (d[p] !== undefined) mat[p] = d[p]; });
 
-        if (d.diffuse) mat.diffuse = col(d.diffuse);
-        if (d.specular) mat.specular = col(d.specular);
-        if (d.emissive) mat.emissive = col(d.emissive);
-        if (d.ambient) mat.ambient = col(d.ambient);
+            if (d.diffuse) mat.diffuse = col(d.diffuse);
+            if (d.specular) mat.specular = col(d.specular);
+            if (d.emissive) mat.emissive = col(d.emissive);
+            if (d.ambient) mat.ambient = col(d.ambient);
 
-        bindTex(mat, d, 'diffuseMap');
-        bindTex(mat, d, 'normalMap');
-        bindTex(mat, d, 'emissiveMap');
-        bindTex(mat, d, 'metalnessMap');
-        if (d.bumpMapFactor !== undefined) mat.bumpMapFactor = d.bumpMapFactor;
-        if (d.specularMap && texMap[d.specularMap]) mat.specularMap = texMap[d.specularMap];
-        if (d.glossMap && texMap[d.glossMap]) mat.glossMap = texMap[d.glossMap];
+            bindTex(mat, d, 'diffuseMap');
+            bindTex(mat, d, 'normalMap');
+            bindTex(mat, d, 'emissiveMap');
+            bindTex(mat, d, 'metalnessMap');
+            if (d.bumpMapFactor !== undefined) mat.bumpMapFactor = d.bumpMapFactor;
+            if (d.specularMap && texMap[d.specularMap]) mat.specularMap = texMap[d.specularMap];
+            if (d.glossMap && texMap[d.glossMap]) mat.glossMap = texMap[d.glossMap];
 
-        if (d.sphereMap && texMap[d.sphereMap]) {
-            mat.sphereMap = texMap[d.sphereMap];
-            mat.useSphereMap = true;
-            mat.sphereMapAmbient = false;
-            if (d.sphereMapTiling) mat.sphereMapTiling = vec2(d.sphereMapTiling);
-            if (d.sphereMapChannel) mat.sphereMapChannel = d.sphereMapChannel;
+            if (d.sphereMap && texMap[d.sphereMap]) {
+                mat.sphereMap = texMap[d.sphereMap];
+                mat.useSphereMap = true;
+                mat.sphereMapAmbient = false;
+                if (d.sphereMapTiling) mat.sphereMapTiling = vec2(d.sphereMapTiling);
+                if (d.sphereMapChannel) mat.sphereMapChannel = d.sphereMapChannel;
+            }
+
+            mat.update();
+            matMap[id] = mat;
+        } catch(e) {
+            console.error('Material error:', id, a.name, e);
         }
-
-        mat.update();
-        matMap[id] = mat;
     }
     console.log('Created', Object.keys(matMap).length, 'materials');
 }
