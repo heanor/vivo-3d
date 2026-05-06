@@ -125,38 +125,34 @@ fetch(ASSET_PREFIX + 'config.json')
         var a = configAssets[id];
         if (a.type === 'texture' && a.file) {
             var url = ASSET_PREFIX + a.file.url;
-            var asset = new pc.Asset(a.name, 'texture', { url: url });
-            asset.id = parseInt(id);
-            (function(texAsset, texId) {
-                var resolved = false;
+            (function(texUrl, texId, texName) {
                 var p = new Promise(function(resolve) {
-                    texAsset.on('load', function() {
-                        if (!resolved) { resolved = true; texMap[texId] = texAsset.resource; resolve(); }
-                    });
-                    texAsset.on('error', function(err) {
-                        console.warn('TEX ERR:', texId, texAsset.name, err);
-                        if (!resolved) { resolved = true; resolve(); }
-                    });
-                    app.assets.add(texAsset);
-                    app.assets.load(texAsset);
-                    if (texAsset.resource && !resolved) {
-                        resolved = true;
-                        texMap[texId] = texAsset.resource;
+                    var img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = function() {
+                        var tex = new pc.Texture(app.graphicsDevice, {
+                            width: img.width,
+                            height: img.height,
+                            format: pc.PIXELFORMAT_R8_G8_B8_A8
+                        });
+                        tex.setSource(img);
+                        tex.name = texName;
+                        texMap[texId] = tex;
                         resolve();
-                    }
+                    };
+                    img.onerror = function() {
+                        console.warn('TEX ERR:', texId, texName, texUrl);
+                        resolve();
+                    };
+                    img.src = texUrl;
                 });
                 textureLoadPromises.push(p);
-            })(asset, id);
+            })(url, id, a.name);
         }
     }
     console.log('Loading', textureLoadPromises.length, 'textures...');
 
-    var loadTimeout = setTimeout(function() {
-        console.warn('TEXTURE TIMEOUT - loaded so far:', Object.keys(texMap).length);
-    }, 10000);
-
     Promise.all(textureLoadPromises).then(function() {
-        clearTimeout(loadTimeout);
         console.log('All textures loaded:', Object.keys(texMap).length);
         try {
             createMaterials();
