@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PlayCanvas Test</title>
+<script src="playcanvas-stable.min.js"></script>
+<style>body{margin:0;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<script>
+// Simple test - does PlayCanvas work?
+var canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
+
+var app = new pc.Application(canvas, {
+    mouse: new pc.Mouse(canvas),
+    touch: new pc.TouchDevice(canvas)
+});
+
+app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
+app.setCanvasResolution(pc.RESOLUTION_AUTO);
+app.resizeCanvas();
+
+// Create a box
+var box = new pc.Entity();
+box.addComponent('model', { type: 'box' });
+app.root.addChild(box);
+
+// Create camera
+var camera = new pc.Entity();
+camera.addComponent('camera', { clearColor: new pc.Color(0.1, 0.1, 0.1) });
+camera.translate(0, 0, 3);
+app.root.addChild(camera);
+
+// Create light
+var light = new pc.Entity();
+light.addComponent('light');
+light.setEulerAngles(45, 30, 0);
+app.root.addChild(light);
+
+app.on('update', function(dt) {
+    box.rotate(10 * dt, 20 * dt, 0);
+});
+
+app.start();
+
+// Now load the vivo model
+setTimeout(function() {
+    var ASSET_PREFIX = 'assets/';
+
+    // Load config
+    fetch(ASSET_PREFIX + 'config.json')
+        .then(r => r.json())
+        .then(config => {
+            console.log('Config loaded, assets:', Object.keys(config.assets).length);
+
+            // Load scene
+            return fetch(ASSET_PREFIX + '2439267.json')
+                .then(r => r.json())
+                .then(scene => {
+                    console.log('Scene loaded, entities:', Object.keys(scene.entities).length);
+
+                    // Find model entities and load them
+                    var modelIds = [];
+                    function findModels(ents) {
+                        for (var id in ents) {
+                            var ent = ents[id];
+                            if (ent.components && ent.components.model) {
+                                modelIds.push({name: ent.name, asset: ent.components.model.asset});
+                            }
+                            if (ent.children) findModels(ent.children);
+                        }
+                    }
+                    findModels(scene.entities);
+                    console.log('Models found:', modelIds);
+
+                    // Load each model
+                    modelIds.forEach(function(m) {
+                        var assetInfo = config.assets[m.asset];
+                        if (assetInfo && assetInfo.file) {
+                            var url = ASSET_PREFIX + assetInfo.file.url;
+                            console.log('Loading model:', m.name, url);
+
+                            var entity = new pc.Entity();
+                            entity.name = m.name;
+
+                            var asset = new pc.Asset(m.name, 'container', { url: url });
+                            asset.on('load', function() {
+                                console.log('Model loaded:', m.name);
+                                entity.addComponent('model');
+                                entity.model.asset = asset;
+                                app.root.addChild(entity);
+
+                                // Hide test box
+                                box.enabled = false;
+                            });
+                            app.assets.add(asset);
+                            app.assets.load(asset);
+                        }
+                    });
+                });
+        })
+        .catch(e => console.error('Error:', e));
+}, 1000);
+</script>
+</body>
+</html>

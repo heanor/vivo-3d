@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Debug Script Loading</title>
+<style>body{margin:0;font-family:monospace;padding:20px;background:#111;color:#0f0;font-size:14px;white-space:pre}</style>
+</head>
+<body>
+<div id="log"></div>
+<script>
+function log(msg) {
+    document.getElementById('log').innerHTML += msg + '\n';
+    console.log(msg);
+}
+</script>
+
+<script>log('1. IMAGE_HOST defined: ' + typeof IMAGE_HOST); var IMAGE_HOST = "assets/";</script>
+
+<script src="playcanvas-stable.min.js" onerror="log('ERROR loading playcanvas')"></script>
+<script>
+log('2. pc defined: ' + (typeof pc));
+log('3. pc.script defined: ' + (typeof pc !== 'undefined' ? typeof pc.script : 'N/A'));
+log('4. pc.script.legacy available: ' + (typeof pc !== 'undefined' && pc.script ? 'yes' : 'NO'));
+</script>
+
+<script src="__settings__.js" onerror="log('ERROR loading __settings__.js')"></script>
+<script>
+log('5. After __settings__.js, CONTEXT_OPTIONS: ' + typeof CONTEXT_OPTIONS);
+log('6. CONFIG_FILENAME: ' + (typeof CONFIG_FILENAME !== 'undefined' ? CONFIG_FILENAME : 'N/A'));
+</script>
+
+<script src="__start__.js" onerror="log('ERROR loading __start__.js')"></script>
+<script>log('7. After __start__.js loaded OK')</script>
+
+<script src="__loading__.js" onerror="log('ERROR loading __loading__.js')"></script>
+<script>log('8. After __loading__.js loaded OK')</script>
+</body>
+</html>

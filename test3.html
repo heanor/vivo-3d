@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Debug Loading</title>
+<style>
+body { margin: 0; background: #111; color: #0f0; font-family: monospace; font-size: 13px; padding: 10px; }
+canvas { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+#log { position: fixed; top: 0; left: 0; z-index: 9999; background: rgba(0,0,0,0.85); padding: 10px; max-height: 100vh; overflow-y: auto; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="log"></div>
+<script>
+var IMAGE_HOST = "assets/";
+window.onerror = function(msg, src, line, col, err) {
+    var el = document.getElementById('log');
+    el.innerHTML += '<div style="color:#f44">ERROR: ' + msg + ' at ' + src + ':' + line + '</div>';
+};
+window.addEventListener('unhandledrejection', function(e) {
+    document.getElementById('log').innerHTML += '<div style="color:#f44">PROMISE ERROR: ' + e.reason + '</div>';
+});
+</script>
+<script src="playcanvas-stable.min.js"></script>
+<script>
+document.getElementById('log').innerHTML += 'pc loaded: ' + (typeof pc) + '<br>';
+document.getElementById('log').innerHTML += 'pc.script: ' + (typeof pc.script) + '<br>';
+</script>
+<script src="__settings__.js"></script>
+<script>
+document.getElementById('log').innerHTML += 'settings loaded<br>';
+document.getElementById('log').innerHTML += 'CONFIG_FILENAME: ' + CONFIG_FILENAME + '<br>';
+document.getElementById('log').innerHTML += 'SCENE_PATH: ' + SCENE_PATH + '<br>';
+</script>
+<script src="__start__.js"></script>
+<script>
+document.getElementById('log').innerHTML += 'start loaded<br>';
+</script>
+<script src="__loading__.js"></script>
+<script>
+document.getElementById('log').innerHTML += 'loading script loaded<br>';
+// Check app state after a delay
+setTimeout(function() {
+    var canvas = document.getElementById('application-canvas');
+    document.getElementById('log').innerHTML += 'canvas exists: ' + !!canvas + '<br>';
+    if (canvas) {
+        document.getElementById('log').innerHTML += 'canvas size: ' + canvas.width + 'x' + canvas.height + '<br>';
+    }
+}, 3000);
+setTimeout(function() {
+    document.getElementById('log').innerHTML += '<div style="color:#ff0">5s passed - check console (F12) for more details</div>';
+}, 5000);
+</script>
+</body>
+</html>

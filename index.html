@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iQOO Z11 - 3D 产品展示</title>
+<script src="playcanvas-stable.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #000; font-family: -apple-system, sans-serif; }
+canvas { display: block; width: 100vw; height: 100vh; }
+#ui { position: fixed; right: 40px; top: 50%; transform: translateY(-50%); z-index: 10; }
+#ui h1 { color: #fff; font-size: 32px; margin-bottom: 8px; }
+#ui p { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 30px; }
+.color-btns { display: flex; gap: 12px; margin-bottom: 30px; }
+.color-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.3s; }
+.color-btn.active { border-color: #fff; transform: scale(1.15); }
+.color-btn[data-color="silver"] { background: linear-gradient(135deg, #c0c0c0, #e8e8e8); }
+.color-btn[data-color="white"] { background: #f5f5f5; }
+.color-btn[data-color="black"] { background: #1a1a1a; }
+#loading { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.5s; }
+#loading.hide { opacity: 0; pointer-events: none; }
+#loading .spinner { width: 40px; height: 40px; border: 3px solid #eee; border-top-color: #333; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading .text { position: absolute; margin-top: 70px; color: #666; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><div class="text">加载 3D 模型中...</div></div>
+<div id="ui">
+  <h1>iQOO Z11</h1>
+  <p>天玑 8500 满血版 | 9020mAh 蓝海电池</p>
+  <div class="color-btns">
+    <div class="color-btn active" data-color="silver" onclick="switchColor(0)"></div>
+    <div class="color-btn" data-color="white" onclick="switchColor(1)"></div>
+    <div class="color-btn" data-color="black" onclick="switchColor(2)"></div>
+  </div>
+</div>
+
+<script>
+var ASSET_PREFIX = 'assets/';
+var canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
+
+var app = new pc.Application(canvas, {
+    mouse: new pc.Mouse(canvas),
+    touch: new pc.TouchDevice(canvas),
+    keyboard: new pc.Keyboard(window),
+    graphicsDeviceOptions: { antialias: true, alpha: false, preferWebGl2: true, powerPreference: 'high-performance' },
+    resourceHandlers: [pc.TextureHandler,pc.ContainerHandler,pc.JsonHandler,pc.MaterialHandler,pc.ModelHandler,pc.AnimationHandler,pc.AnimClipHandler,pc.AnimStateGraphHandler,pc.FontHandler,pc.ScriptHandler,pc.ShaderHandler,pc.CssHandler,pc.HierarchyHandler,pc.FolderHandler,pc.BinaryHandler,pc.TextureAtlasHandler,pc.SpriteHandler,pc.TemplateHandler,pc.GSplatHandler].filter(Boolean)
+});
+app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
+app.setCanvasResolution(pc.RESOLUTION_AUTO);
+app.graphicsDevice.maxPixelRatio = window.devicePixelRatio;
+app.resizeCanvas();
+
+app.scene.toneMapping = pc.TONEMAP_ACES;
+app.scene.exposure = 1.3;
+app.scene.gammaCorrection = pc.GAMMA_SRGB;
+
+var camera = new pc.Entity('camera');
+camera.addComponent('camera', { clearColor: new pc.Color(0,0,0), fov: 45 });
+camera.setPosition(0, 0.3, 2.5);
+app.root.addChild(camera);
+
+var orbit = { angleX:0.15, angleY:0, targetAngleX:0.15, targetAngleY:0, distance:0.3, targetDistance:0.3, target:new pc.Vec3(0,0.08,0), damping:0.12, autoRotateSpeed:0.003, autoRotate:true };
+var isDragging=false,lastX=0,lastY=0;
+canvas.addEventListener('mousedown',function(e){isDragging=true;lastX=e.clientX;lastY=e.clientY;orbit.autoRotate=false;});
+window.addEventListener('mouseup',function(){isDragging=false;});
+window.addEventListener('mousemove',function(e){if(!isDragging)return;orbit.targetAngleY-=(e.clientX-lastX)*0.008;orbit.targetAngleX+=(e.clientY-lastY)*0.005;orbit.targetAngleX=Math.max(-1.5,Math.min(1.5,orbit.targetAngleX));lastX=e.clientX;lastY=e.clientY;});
+var lastTouchX,lastTouchY;
+canvas.addEventListener('touchstart',function(e){orbit.autoRotate=false;if(e.touches.length===1){isDragging=true;lastTouchX=e.touches[0].clientX;lastTouchY=e.touches[0].clientY;}if(e.touches.length===2)isDragging=false;});
+canvas.addEventListener('touchmove',function(e){e.preventDefault();if(e.touches.length===1&&isDragging){orbit.targetAngleY-=(e.touches[0].clientX-lastTouchX)*0.006;orbit.targetAngleX-=(e.touches[0].clientY-lastTouchY)*0.006;orbit.targetAngleX=Math.max(-1.5,Math.min(1.5,orbit.targetAngleX));lastTouchX=e.touches[0].clientX;lastTouchY=e.touches[0].clientY;}},{passive:false});
+canvas.addEventListener('touchend',function(){isDragging=false;});
+app.on('update',function(){if(orbit.autoRotate)orbit.targetAngleY+=orbit.autoRotateSpeed;orbit.angleX+=(orbit.targetAngleX-orbit.angleX)*orbit.damping;orbit.angleY+=(orbit.targetAngleY-orbit.angleY)*orbit.damping;orbit.distance+=(orbit.targetDistance-orbit.distance)*orbit.damping;var x=orbit.distance*Math.sin(orbit.angleY)*Math.cos(orbit.angleX),y=orbit.distance*Math.sin(orbit.angleX)+orbit.target.y,z=orbit.distance*Math.cos(orbit.angleY)*Math.cos(orbit.angleX);camera.setPosition(x+orbit.target.x,y,z+orbit.target.z);camera.lookAt(orbit.target);/* lights follow camera orbit */var deg=orbit.angleY*180/Math.PI;l1.setEulerAngles(50,30+deg,0);l2.setEulerAngles(-30,-50+deg,0);l3.setEulerAngles(90,deg,0);});
+
+app.scene.ambientLight = new pc.Color(0.075,0.075,0.09);
+var l1=new pc.Entity();l1.addComponent('light',{type:'directional',color:new pc.Color(1,0.98,0.95),intensity:0.75});app.root.addChild(l1);
+var l2=new pc.Entity();l2.addComponent('light',{type:'directional',color:new pc.Color(0.7,0.75,0.9),intensity:0.3});app.root.addChild(l2);
+var l3=new pc.Entity();l3.addComponent('light',{type:'directional',color:new pc.Color(1,1,1),intensity:0.2});app.root.addChild(l3);
+
+var configAssets = {};
+var texMap = {};
+var matMap = {};
+var modelEntityMap = {};
+var allMeshInstances = [];
+var loadedCount = 0;
+
+var MODEL_MAPPINGS = {
+    278882486: [[0,278539959],[1,278540115],[2,278539959],[3,278539959],[4,278539959],[5,278540115]],
+    278882489: [[1,278540115],[2,278540108],[3,278540103],[4,278540097],[6,278539970]],
+    279876811: [[0,278540000],[1,278539957]],
+    278910031: [[0,278908437],[1,278539964],[2,278539990],[3,278539964],[4,278539991],[5,278540245],[6,278540115],[7,278540015],[8,278539979],[9,278539979],[10,278540108],[11,278540103],[12,278908434],[13,278540108],[14,278540103],[15,278539979],[16,278908434],[17,278539979]],
+    278910011: [[0,278539964],[1,278540115]]
+};
+
+var COLOR_VARIANTS = {
+    backShell: [
+        {diffuse:278910452, emissive:278910452, metalness:278910452, matId:278539957},
+        {diffuse:278910816, emissive:278910816, metalness:278910816, matId:278539967},
+        {diffuse:278910817, emissive:278910817, metalness:278540043, matId:278539987}
+    ],
+    screen: [
+        {diffuse:278910452, emissive:278910452, matId:278539970},
+        {diffuse:278910816, emissive:278910816, matId:278539962},
+        {diffuse:278910817, emissive:278910817, matId:278539968}
+    ],
+    logo:       [{matId:278540000}, {matId:278540005}, {matId:278539995}],
+    frame:      [{matId:278539959}, {matId:278539966}, {matId:278540008}],
+    frameLine:  [{matId:278540026}, {matId:278539977}, {matId:278540006}],
+    cameraVert: [{matId:278540245}, {matId:278539985}, {matId:278540007}],
+    cameraFrame:[{matId:278539991}, {matId:278539961}, {matId:278540001}]
+};
+
+var currentColor = 0;
+
+fetch(ASSET_PREFIX + 'config.json')
+.then(function(r) { return r.json(); })
+.then(function(config) {
+    configAssets = config.assets;
+    console.log('Config loaded:', Object.keys(configAssets).length, 'assets');
+
+    var textureLoadPromises = [];
+    for (var id in configAssets) {
+        var a = configAssets[id];
+        if (a.type === 'texture' && a.file) {
+            var url = ASSET_PREFIX + a.file.url;
+            var asset = new pc.Asset(a.name, 'texture', { url: url });
+            asset.id = parseInt(id);
+            app.assets.add(asset);
+            (function(texAsset, texId) {
+                var p = new Promise(function(resolve) {
+                    texAsset.on('load', function() {
+                        texMap[texId] = texAsset.resource;
+                        resolve();
+                    });
+                    texAsset.on('error', function(err) {
+                        console.warn('Texture load error:', texId, err);
+                        resolve();
+                    });
+                });
+                app.assets.load(texAsset);
+                textureLoadPromises.push(p);
+            })(asset, id);
+        }
+    }
+    console.log('Loading', textureLoadPromises.length, 'textures...');
+
+    Promise.all(textureLoadPromises).then(function() {
+        console.log('All textures loaded:', Object.keys(texMap).length);
+        createMaterials();
+        loadModels();
+    });
+});
+
+function createMaterials() {
+    var scalarProps = ['useMetalness','metalness','shininess','opacity','blendType','depthWrite','useLighting','cullMode','diffuseTint','emissiveTint','ambientTint','emissiveIntensity','reflectivity','refractionIndex','conserveEnergy'];
+    function vec2(arr) { return new pc.Vec2(arr[0], arr[1]); }
+    function col(arr) { return new pc.Color(arr[0], arr[1], arr[2]); }
+    function bindTex(mat, d, prop) {
+        if (!d[prop] || !texMap[d[prop]]) return;
+        mat[prop] = texMap[d[prop]];
+        if (d[prop+'Tiling']) mat[prop+'Tiling'] = vec2(d[prop+'Tiling']);
+        if (d[prop+'Offset']) mat[prop+'Offset'] = vec2(d[prop+'Offset']);
+    }
+
+    for (var id in configAssets) {
+        var a = configAssets[id];
+        if (a.type !== 'material' || !a.data) continue;
+
+        var d = a.data;
+        var mat = new pc.StandardMaterial();
+        mat.name = a.name;
+
+        scalarProps.forEach(function(p) { if (d[p] !== undefined) mat[p] = d[p]; });
+
+        if (d.diffuse) mat.diffuse = col(d.diffuse);
+        if (d.specular) mat.specular = col(d.specular);
+        if (d.emissive) mat.emissive = col(d.emissive);
+        if (d.ambient) mat.ambient = col(d.ambient);
+
+        bindTex(mat, d, 'diffuseMap');
+        bindTex(mat, d, 'normalMap');
+        bindTex(mat, d, 'emissiveMap');
+        bindTex(mat, d, 'metalnessMap');
+        if (d.bumpMapFactor !== undefined) mat.bumpMapFactor = d.bumpMapFactor;
+        if (d.specularMap && texMap[d.specularMap]) mat.specularMap = texMap[d.specularMap];
+        if (d.glossMap && texMap[d.glossMap]) mat.glossMap = texMap[d.glossMap];
+
+        if (d.sphereMap && texMap[d.sphereMap]) {
+            mat.sphereMap = texMap[d.sphereMap];
+            mat.useSphereMap = true;
+            mat.sphereMapAmbient = false;
+            if (d.sphereMapTiling) mat.sphereMapTiling = vec2(d.sphereMapTiling);
+            if (d.sphereMapChannel) mat.sphereMapChannel = d.sphereMapChannel;
+        }
+
+        mat.update();
+        matMap[id] = mat;
+    }
+    console.log('Created', Object.keys(matMap).length, 'materials');
+}
+
+var MODEL_IDS = [278882486, 278882489, 279876811, 278910031, 278910011];
+
+function loadModels() {
+    MODEL_IDS.forEach(function(modelId) {
+        var a = configAssets[modelId];
+        if (!a || !a.file) return;
+
+        var url = ASSET_PREFIX + a.file.url;
+        var containerAsset = new pc.Asset(a.name, 'container', { url: url });
+        containerAsset.id = modelId;
+        app.assets.add(containerAsset);
+
+        containerAsset.on('load', function() {
+            var entity = containerAsset.resource.instantiateRenderEntity();
+            entity.name = a.name;
+            app.root.addChild(entity);
+            modelEntityMap[modelId] = entity;
+
+            var mapping = MODEL_MAPPINGS[modelId];
+            if (mapping && entity.render) {
+                var meshInstances = entity.render.meshInstances;
+                mapping.forEach(function(pair) {
+                    var meshIdx = pair[0];
+                    var matId = pair[1];
+                    if (meshIdx < meshInstances.length && matMap[matId]) {
+                        meshInstances[meshIdx].material = matMap[matId];
+                    }
+                });
+                meshInstances.forEach(function(mi) { allMeshInstances.push(mi); });
+            }
+
+            loadedCount++;
+            console.log('Model loaded:', a.name, '(' + loadedCount + '/' + MODEL_IDS.length + ')');
+
+            if (loadedCount >= MODEL_IDS.length) {
+                onAllModelsLoaded();
+            }
+        });
+
+        containerAsset.on('error', function(err) {
+            console.error('Model load error:', a.name, err);
+            loadedCount++;
+            if (loadedCount >= MODEL_IDS.length) onAllModelsLoaded();
+        });
+
+        app.assets.load(containerAsset);
+    });
+}
+
+function onAllModelsLoaded() {
+    app.once('update', function() {
+        var minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity,found=0;
+        function expandBounds(mi) {
+            var c=mi.aabb.center, h=mi.aabb.halfExtents;
+            minX=Math.min(minX,c.x-h.x); minY=Math.min(minY,c.y-h.y); minZ=Math.min(minZ,c.z-h.z);
+            maxX=Math.max(maxX,c.x+h.x); maxY=Math.max(maxY,c.y+h.y); maxZ=Math.max(maxZ,c.z+h.z);
+            found++;
+        }
+        app.root.forEach(function(ent) {
+            if (ent.render && ent.render.meshInstances) ent.render.meshInstances.forEach(expandBounds);
+        });
+
+        console.log('Bounds scan: found', found, 'meshes');
+        console.log('AABB min:', minX.toFixed(3), minY.toFixed(3), minZ.toFixed(3));
+        console.log('AABB max:', maxX.toFixed(3), maxY.toFixed(3), maxZ.toFixed(3));
+
+        if (found > 0 && isFinite(minX)) {
+            var cx = (minX+maxX)/2, cy = (minY+maxY)/2, cz = (minZ+maxZ)/2;
+            orbit.target.set(cx, cy, cz);
+            console.log('Orbit target:', cx.toFixed(3), cy.toFixed(3), cz.toFixed(3));
+        }
+
+        document.getElementById('loading').classList.add('hide');
+        console.log('All models loaded!');
+    });
+}
+
+function switchColor(variantIndex) {
+    currentColor = variantIndex;
+    document.querySelectorAll('.color-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.color-btn')[variantIndex].classList.add('active');
+
+    var texVariants = [
+        {v: COLOR_VARIANTS.backShell[variantIndex], keys: ['diffuse','emissive','metalness']},
+        {v: COLOR_VARIANTS.screen[variantIndex], keys: ['diffuse','emissive']}
+    ];
+    texVariants.forEach(function(tv) {
+        var mat = matMap[tv.v.matId];
+        if (!mat || !tv.v.diffuse || !texMap[tv.v.diffuse]) return;
+        tv.v.keys.forEach(function(k) { mat[k+'Map'] = texMap[tv.v[k]]; });
+        mat.update();
+    });
+
+    var matSwaps = ['logo','frame','frameLine','cameraVert','cameraFrame'];
+    matSwaps.forEach(function(key) {
+        var variants = COLOR_VARIANTS[key];
+        var oldMat = matMap[variants[0].matId];
+        var newMat = matMap[variants[variantIndex].matId];
+        if (!oldMat || !newMat) return;
+        allMeshInstances.forEach(function(mi) {
+            if (mi.material === oldMat) mi.material = newMat;
+        });
+    });
+}
+
+app.start();
+</script>
+</body>
+</html>
